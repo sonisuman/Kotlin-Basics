@@ -13,8 +13,8 @@
 
 ## Class Materials
 
-- Materials for the class are in the [class repository](https://github.com/ExgnoRepos/2420-Kotlin-Aug12-14)
-- All materials are in the repository and are available until September 21, 2024. 
+- Materials for the class are in the [class repository](https://github.com/ExgnoRepos/C2403-Kotlin-August-12)
+- All materials are in the repository and are available until September 14, 2024. 
 - All materials in the repository are published under a creative commons or equivalent license that permits free sharing.
 - We will be making extensive use of the online Kotlin documentation during class. Links to the documentation used will be cited in this material with additional reading and video links in the README file.
 - This repository may be updated as additional resources are added during class.
