@@ -1,4 +1,4 @@
-# Lab 1 - Kotlin Platforms
+# Lab Kotlin Platforms
 <!--suppress CheckImageSize -->
 
 ## Objectives
