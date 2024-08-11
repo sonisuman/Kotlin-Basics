@@ -411,11 +411,12 @@ The length of elvis is 0
 
 Arrays are of a fixed size. Resizing an array means creating a new array of the desired size then copying over the elements of the old array. The reason is tht Kotlin arrays are build on top of Java arrays which are designed to occupy a contiguous block of memory. This allows constant time access to any element in the array.
 
-The contents of arrays themselves are mutable however.
+The contents of arrays themselves are mutable, however.
 
 Arrays can be defined to be a specific types using the `Array<T>` notation. However, mixed types of arrays can be defined using `Array<Any>`. This works because the basic types and reference types are treated the same in Kotlin.
 
 ```kotlin
+package demo_2_12
 
 class Cat
 
@@ -534,7 +535,7 @@ In Kotlin, the `if-then-else` construct return a value. In this way, it function
 The return value of the expression is the value of the last expression in the block that was executed.
 
 ```kotlin
-ackage demo_2_8
+package demo_2_16
 
 fun main() {
     val a = 2
@@ -600,9 +601,102 @@ As per the documentation
 ## Returns and Jumps
 
 
+[Kotlin Documentation](https://kotlinlang.org/docs/returns.html)
+
+In most cases, the behaviour of `return`, `break` and `continue` is the same as  Java; however, once loops and functions are nested, there has to be a way to determine which of the constructs we are returning from of jumping out of: the inner or the outer.
+
+This is solved by providing labels for the constructs so that we can specify exactly which construct we are returning from or jumping out of.
+
+```kotlin
+package demo_2_17
+
+fun main() {
+    println("Demo of break with label:")
+    breakDemo()
+
+    println("\nDemo of continue with label:")
+    continueDemo()
+}
+
+fun breakDemo() {
+    outerLoop@ for (i in 1..3) {
+        for (j in 1..3) {
+            println("i = $i, j = $j")
+            if (j == 2) {
+                println("Breaking the outer loop when j == 2")
+                break@outerLoop // breaks the outer loop
+            }
+        }
+    }
+    println("Exited the outer loop.")
+}
+
+fun continueDemo() {
+    outerLoop@ for (i in 1..3) {
+        for (j in 1..3) {
+            if (j == 2) {
+                println("Continuing the outer loop when j == 2")
+                continue@outerLoop // skips to the next iteration of the outer loop
+            }
+            println("i = $i, j = $j")
+        }
+    }
+    println("Finished the loops.")
+}
+```
+```shell
+Demo of break with label:
+i = 1, j = 1
+i = 1, j = 2
+Breaking the outer loop when j == 2
+Exited the outer loop.
+
+Demo of continue with label:
+i = 1, j = 1
+Continuing the outer loop when j == 2
+i = 2, j = 1
+Continuing the outer loop when j == 2
+i = 3, j = 1
+Continuing the outer loop when j == 2
+Finished the loops.
+```
+ 
+The same problem exists when a lambda function inside a function executes are return
+
+```kotlin
+package demo_2_18
+
+fun main() {
+    println("Demo of labeled return:")
+    findNumber(listOf(1, 2, 3, 4, 5))
+
+}
+
+fun findNumber(numbers: List<Int>) {
+    numbers.forEach numberLoop@{
+        if (it == 4) {
+            println("Found number 4, returning from lambda using labeled return.")
+            return@numberLoop // returns from the lambda, not the enclosing function
+            //println("Found number 4, returning from function.")
+            //return
+        }
+        println("Processing number $it")
+    }
+    println("Finished processing all numbers.")
+}
+```
+
+Note that if we are using an anonymous function instead of a lambda, the `return` always refers to returning from the anonymous function
+
 ## Exceptions
 
-Just like in other 
+[Kotlin Documentation](https://kotlinlang.org/docs/exceptions.html)
+
+Two of the big changes from Java are the fact that there are no checked exceptions.
+
+The second is the use of the helper functions like `require()` to emulate as assertion type mechanism.
+
+## End Module
 
 
 
