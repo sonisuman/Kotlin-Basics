@@ -124,8 +124,115 @@ Hello, my name is Alice and I am 25 years old.
 
 ### Anonymous functions
 
-An anonymous function  is defined without a name and is typically used when a function needs to be passed as an argument, returned from another function, or assigned to a variable. Unlike lambdas, anonymous functions allow the return type to be specified explicitly and can include multiple statements with control structures such as return, break, or continue.
+An anonymous function is a function without a name. Unlike a lambda, an anonymous function has a more traditional function syntax, which can include a return type and multiple statements within a block. Anonymous functions are useful when you need a function for a short duration or within a limited scope, but don’t want to declare it globally or give it a name.
 
-```kotlin 
+The basic syntax of an anonymous function is:
+
+` 
+fun(parameter(s)): ReturnType {  // function body }
+`
+```kotlin
+package demo_4_5
+
+fun main() {
+
+    // Anonymous Function with No Parameters:
+    val sayHello = fun() {
+        println("Hello, World!")
+    }
+    sayHello()
+
+    // Anonymous Function with Parameters:
+    val multiply = fun(a: Int, b: Int): Int {
+        return a * b
+    }
+    val result = multiply(3, 4)
+    println(result)
+
+    // Anonymous Function with Implicit Return Type:
+    // The return type can be omitted if it can be inferred
+    val add = fun(a: Int, b: Int) = a + b
+    val sum = add(15, 70)
+    println(sum)
+
+   // Anonymous Function as a Function Parameter:
+
+    fun performOperation(a: Int, b: Int, operation: (Int, Int) -> Int): Int {
+        return operation(a, b)
+    }
+    val result1 = performOperation(8, 3, fun(x: Int, y: Int): Int {
+        return x - y
+    })
+    println(result1)
+
+}
+```
+```shell
+Hello, World!
+12
+85
+5
+```
+
+---
+
+## Closures
+
+A closure is a lambda expression or an anonymous function that captures and retains access to variables from its surrounding scope, known as free variables. These free variables are not defined within the lambda or function itself but are used inside it
+
+In the example below, `sum` is a free variable.
+
+```kotlin
+package demo_4_6
+
+fun main() {
+    // Accumulator function as a closure
+    val accumulator = createAccumulator()
+
+    println(accumulator(5))  // Output: 5
+    println(accumulator(10)) // Output: 15
+    println(accumulator(3))  // Output: 18
+}
+
+fun createAccumulator(): (Int) -> Int {
+    var sum = 0  // Free variable captured by the lambda
+
+    return { value: Int ->
+        sum += value
+        sum  // The lambda returns the updated sum
+    }
+}
 
 ```
+```shell
+5
+15
+18
+```
+
+---
+
+## Inline Functions
+
+An inline function is a function where the compiler copies the function's code directly into the calling code instead of creating a function call. This can reduce the overhead of function calls, particularly for small functions or those that take lambda expressions as parameters. The main advantage of inline functions is to improve performance by avoiding the creation of additional function objects and eliminating the need for virtual function calls.
+
+```kotlin
+package demo_4_7
+
+inline fun performOperation(a: Int, b: Int, operation: (Int, Int) -> Int): Int {
+    return operation(a, b)
+}
+
+fun main() {
+    val sum = performOperation(3, 4) { x, y -> x + y }
+    val product = performOperation(3, 4) { x, y -> x * y }
+
+    println("Sum: $sum")       // Output: Sum: 7
+    println("Product: $product") // Output: Product: 12
+}
+
+```
+
+In the above example, when the `performOperation` function is marked as `inline`, the compiler will replace the function call with the actual code inside the function during compilation. This means that the lambda expressions `{ x, y -> x + y }` and `{ x, y -> x * y }` are directly inserted into the places where `performOperation` is called.
+
+
