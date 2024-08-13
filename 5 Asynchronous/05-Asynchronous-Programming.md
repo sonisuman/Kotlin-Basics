@@ -450,7 +450,7 @@ main runBlocking: After delay in thread main
 
 [Kotlin Documentation](Extract function refactoring)
 
-Note that the `suspend` keyword helps the compiler know this is a function called from inside a coroutine scope and there for can use the `delay()` function
+Note that the `suspend` keyword helps the compiler know this is a function called from inside a coroutine scope and therefore can use the `delay()` function
 
 ```kotlin
 package demo_5_10
@@ -472,5 +472,457 @@ suspend fun doWorld() {
 
 ## Scope builder and concurrency
 
-[Kotlin documenttion](https://kotlinlang.org/docs/coroutines-basics.html#scope-builder-and-concurrency)
+[Kotlin documentation](https://kotlinlang.org/docs/coroutines-basics.html#scope-builder-and-concurrency)
 
+- _runBlocking:_ It blocks the thread it's running on, meaning the thread can't do anything else while waiting. It's like telling the thread, "Stop everything and just wait here until all tasks are done."
+- _coroutineScope:_ It suspends the current function, which means the thread is freed up and can be used for other tasks while waiting. It's like saying, "Hey, I'm waiting for these tasks, but you can go do something else in the meantime."
+
+```kotlin
+package demo_5_11
+
+import kotlinx.coroutines.*
+
+// Sequentially executes doWorld followed by "Done"
+fun main() = runBlocking {
+    println("main runBlocking: I'm working in thread ${Thread.currentThread().name}")
+    doWorld()
+    println("Done")
+}
+
+// Concurrently executes both sections
+suspend fun doWorld() = coroutineScope { // this: CoroutineScope
+    println("doWorld: I'm working in thread ${Thread.currentThread().name}")
+    launch {
+        println("first launch: I'm working in thread ${Thread.currentThread().name}")
+        delay(2000L)
+        println("World 2")
+    }
+    launch {
+        println("first launch: I'm working in thread ${Thread.currentThread().name}")
+        delay(1000L)
+        println("World 1")
+    }
+    println("Hello")
+}
+```
+```shell
+main runBlocking: I'm working in thread main
+doWorld: I'm working in thread main
+Hello
+first launch: I'm working in thread main
+first launch: I'm working in thread main
+World 1
+World 2
+Done
+```
+
+---
+
+## Jobs
+
+[Kotlin Documenation](https://kotlinlang.org/docs/coroutines-basics.html#an-explicit-job)
+
+One of the main uses of jobs is to allow us to send messages to coroutines
+
+```kotlin
+package demo_5_12
+
+import kotlinx.coroutines.*
+
+fun main() = runBlocking {
+    val job1 = launch { // launch a new coroutine and keep a reference to its Job
+        delay(2000L)
+        println("This is job 1")
+    }
+    val job2 = launch { // launch a new coroutine and keep a reference to its Job
+       // job1.cancel()
+       // job1.join()
+        delay(1000L)
+        println("This is job 2")
+    }
+    println("Hello")
+   //job1.join() // wait until child coroutine completes
+    println("Done")
+}
+```
+
+And we can nest coroutines like this
+
+```kotlin
+package demo_5_13
+
+import kotlinx.coroutines.*
+
+fun main() = runBlocking {
+    val job1 = launch { // launch a new coroutine and keep a reference to its Job
+        val job2 = launch { // launch a new coroutine and keep a reference to its Job
+            delay(3000L)
+            println("This is job 2")
+        }
+        //job2.join()
+        delay(1000L)
+        println("This is job 1")
+    }
+
+    println("Hello")
+    //job1.join() // wait until child coroutine completes
+    // job1.cancel()
+    println("Done")
+}
+```
+
+### Job states
+
+<img src="images/jobstates.png" alt="" width="600">
+
+Job has similar states to Thread.
+
+The major difference is that Job has no blocked state, since coroutines suspend instead of blocking.
+
+Also, both the Cancelled and Completed states are accompanied by their ‘-ing’ analog. These exist because the coroutine finishes only when all of its children finish.
+
+This means that a Job (coroutine) might complete all of its work successfully, but then it has to wait for its children to do the same, and one of its children might fail at this stage. If this happens, then despite Job itself succeeding, the whole load of work that was connected to it, including all of its children, has failed, and that is signaled by Job transitioning to the Cancelling and then Cancelled states.
+
+In Kotlin, coroutines and jobs are closely related but conceptually different. Here's an explanation of each and how they relate to each other:
+
+#### Coroutine:
+
+- A coroutine is a concept that represents a computation or task that can be suspended and resumed. Coroutines allow you to write asynchronous, non-blocking code in a sequential style. They are lightweight and can be used to perform tasks concurrently without blocking the main thread.
+- When you launch a coroutine, it can perform some work, suspend itself to wait for some condition (like waiting for a network response), and then resume from where it left off once the condition is met. The suspension and resumption happen without blocking the underlying thread.
+- The focus of a coroutine is on the code execution, defining what should be done, and how it can be paused and resumed.
+
+#### Job:
+
+- A Job is a handle or reference to a coroutine. It represents a background task or a unit of work that is being performed by a coroutine. The Job interface allows you to manage the lifecycle of a coroutine, such as checking its status, canceling it, or waiting for its completion.
+- When you launch a coroutine (using launch or other coroutine builders), it returns a Job object. This Job can be used to interact with the coroutine. For instance, you can check if the coroutine is still active, cancel it, or wait until it completes.
+- The focus of a Job is on controlling and managing the lifecycle of the coroutine, not on the execution of the coroutine's code itself.
+
+Every coroutine has an associated Job. The Job is what allows you to manage the coroutine after it has been launched. Think of the Job as the "control panel" for the coroutine. While the coroutine is doing its work, the Job gives you the tools to check on, cancel, or wait for that work to finish.
+
+---
+
+## Coroutine context and dispatchers
+
+[Kotlin Documentation](https://kotlinlang.org/docs/coroutine-context-and-dispatchers.html)
+
+#### Coroutines are Lightweight:
+
+Coroutines are much lighter than threads. You can have thousands of coroutines running on a few threads because coroutines don’t need a dedicated thread for each one. They share threads and can be suspended and resumed, allowing the thread to be used for other tasks in the meantime.
+
+#### Dispatchers Determine Thread Usage:
+
+In Kotlin, dispatchers control which thread or threads a coroutine will run on. There are several built-in dispatchers:
+- Dispatchers.Default: Uses a pool of shared background threads, ideal for CPU-intensive tasks.
+- Dispatchers.IO: Uses a pool of threads optimized for I/O operations, like reading from disk or network.
+- Dispatchers.Main: Runs coroutines on the main thread, typically used for UI updates in Android apps.
+- Dispatchers.Unconfined: Starts the coroutine in the caller thread but only until the first suspension point. After that, it resumes in whatever thread is available.
+
+#### Suspension and Resumption:
+
+When a coroutine is suspended (paused), the thread it was using is freed up to do other work. When the coroutine is ready to resume, it may continue on the same thread or a different one, depending on the dispatcher and the availability of threads.
+
+#### Thread Reuse:
+
+Because coroutines can suspend and resume, they make very efficient use of threads. For example, a coroutine might start on one thread, get suspended (say, waiting for data), and when it’s ready to resume, it might continue on a different thread. This allows for better use of resources compared to traditional threading, where each thread is typically blocked and waiting during such operations.
+
+### Unconfined vs confined dispatcher
+
+[Kotlin Documentation](https://kotlinlang.org/docs/coroutine-context-and-dispatchers.html#unconfined-vs-confined-dispatcher)
+
+```kotlin
+
+package demo_5_14
+
+import kotlinx.coroutines.*
+
+fun main() = runBlocking<Unit> {
+    launch(Dispatchers.Unconfined) { // not confined -- will work with main thread
+        println("Unconfined      : I'm working in thread ${Thread.currentThread().name}")
+        delay(500)
+        println("Unconfined      : After delay in thread ${Thread.currentThread().name}")
+    }
+    launch { // context of the parent, main runBlocking coroutine
+     //   launch(Dispatchers.Default) { // override
+        println("main runBlocking: I'm working in thread ${Thread.currentThread().name}")
+        delay(1000)
+        println("main runBlocking: After delay in thread ${Thread.currentThread().name}")
+    }
+}
+```
+
+```shell
+Unconfined      : I'm working in thread main
+main runBlocking: I'm working in thread main
+Unconfined      : After delay in thread kotlinx.coroutines.DefaultExecutor
+main runBlocking: After delay in thread main
+```
+
+---
+
+## Coroutine scope
+
+[Kotlin Documentation](https://kotlinlang.org/docs/coroutine-context-and-dispatchers.html#coroutine-scope)
+
+A coroutine scope in Kotlin is used to manage the lifecycle of coroutines. It ensures that coroutines are properly started, stopped, and cleaned up when no longer needed, preventing potential memory leaks and ensuring that resources are used efficiently. By using scopes, you get structured concurrency, which makes your concurrent code more predictable and manageable.
+
+### Coroutine Scopes?
+
+_Global Scope:_ This scope is tied to the application's lifecycle, so coroutines launched in GlobalScope will keep running as long as the app is alive. It’s not recommended for most cases because it doesn’t have structured concurrency, meaning coroutines can outlive their intended purpose.
+
+_CoroutineScope:_ This is the most common way to create a scope. For example, in an Android app, you might use a CoroutineScope tied to the lifecycle of a ViewModel or an activity. This way, when the ViewModel or activity is destroyed, the scope is canceled, and all coroutines are automatically cleaned up.
+
+_runBlocking:_ This is a special scope used to bridge between blocking and non-blocking code. It blocks the current thread until all coroutines inside it complete. It’s commonly used in main functions or tests.
+
+```kotlin
+package demo_5_16
+
+import kotlinx.coroutines.*
+
+fun main() {
+    // Creating a custom coroutine scope with a Job and Dispatcher
+    val myCoroutineScope = CoroutineScope(Job() + Dispatchers.Default)
+
+    // Launching a coroutine within the custom scope
+    myCoroutineScope.launch {
+        try {
+            val data = fetchDataFromNetwork()
+            println("Data fetched: $data")
+        } catch (e: Exception) {
+            println("Error fetching data: ${e.message}")
+        }
+    }
+
+    // Simulate some other work in the main thread
+    println("Main thread is running...")
+
+    // Keeping the main thread alive to see coroutine's output
+    Thread.sleep(3000)
+
+    // Cancel the scope to clean up any running coroutines
+    myCoroutineScope.cancel()
+}
+
+// Simulating a network call that fetches data
+suspend fun fetchDataFromNetwork(): String {
+    delay(2000) // Simulate network delay
+    return "Fetched Data"
+}
+
+```
+
+The GlobalScope in Kotlin is a global coroutine scope that can be used to launch coroutines that live for the entire duration of the application. While it is useful for certain long-running tasks, it should be used carefully to avoid potential issues like memory leaks or unintended long-lived operations. In general, it's recommended to use more specific coroutine scopes when possible to better manage the lifecycle of coroutines.
+
+#### When to Use GlobalScope:
+
+When you need to perform tasks that should run for the entire duration of the application, such as background data syncing or monitoring.
+
+Since GlobalScope coroutines are not automatically canceled, it's easy to create coroutines that could potentially cause memory leaks or continue running even when they are no longer needed. For most use cases, it's better to use a scoped coroutine tied to a specific lifecycle (like viewModelScope or a custom CoroutineScope).
+
+```kotlin
+import kotlinx.coroutines.*
+
+fun main() {
+    println("Main program starts: ${Thread.currentThread().name}")
+
+    // Launch a coroutine in the GlobalScope
+    GlobalScope.launch {
+        println("Fake network request starts: ${Thread.currentThread().name}")
+        val data = fetchDataFromNetwork()
+        println("Data fetched: $data")
+    }
+
+    // Simulate some other work in the main thread
+    println("Main thread is doing other work...")
+
+    // Keep the main thread alive for a while to see the coroutine's output
+    Thread.sleep(3000) // Not needed in a real application with an event loop or main loop
+
+    println("Main program ends: ${Thread.currentThread().name}")
+}
+
+// Simulating a network call that fetches data
+suspend fun fetchDataFromNetwork(): String {
+    delay(2000) // Simulate network delay
+    return "Fetched Data"
+}
+```
+
+---
+
+## Coroutine builders
+
+Coroutines are created using coroutine builders. Three of the most commonly used coroutine builders are runBlocking, launch, and async. Each of these builders serves a different purpose and is used in different contexts. 
+
+#### runBlocking
+
+- Used to bridge the gap between blocking and non-blocking code. It is typically used in the main function or in tests where you need to execute suspending functions in a blocking manner.
+- It blocks the current thread until the coroutine inside it completes.
+- The coroutine started with runBlocking will run on the current thread (e.g., the main thread) and block it until completion.
+- Useful for writing simple scripts, quick tests, or when you need to run coroutine code in a blocking context, such as in the main function of a console application.
+
+#### launch
+
+- Launch is used to start a new coroutine that doesn't return a result. It is the most common way to start a coroutine that performs some work asynchronously and does not require a return value.
+- It launches a coroutine in the background and immediately returns a Job object, which represents the coroutine's lifecycle. The launch builder is fire-and-forget, meaning it doesn't provide a result but just starts the coroutine.
+- Ideal for launching coroutines that perform side effects, such as updating the UI, logging, or running background tasks where you don't need a result.
+
+#### async
+
+- Used to start a new coroutine that will return a result. It is similar to launch, but it is designed for coroutines that need to return a value.
+- It launches a coroutine and returns a Deferred object, which represents a future result of the coroutine. The Deferred can be awaited to get the result once the coroutine completes.
+- Useful for performing parallel tasks that need to return results, such as making multiple network requests concurrently and combining their results.
+
+```kotlin
+package demo_5_18
+import kotlinx.coroutines.*
+
+fun main() = runBlocking {
+    println("Launch async")
+    val deferredResult = async {
+        delay(1000L)
+        "Result from async"
+    }
+    println("Main program continues")
+    val result = deferredResult.await()  // Await the result
+    println("Async result: $result")
+}
+```
+
+---
+
+## Channels
+
+[Kotlin Documentation](https://kotlinlang.org/docs/channels.html)
+
+A channel is a way to send and receive data between coroutines.It can be thought  of a pipeline or a queue where one coroutine can put (send) data in, and another coroutine can take (receive) that data out.
+- Sending Data: One coroutine can "send" data into the channel, like putting a message into a mailbox.
+- Receiving Data: Another coroutine can "receive" data from the channel, like taking the message out of the mailbox.
+
+```kotlin
+package demo_5_19
+
+import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.*
+
+fun main() = runBlocking<Unit> {
+    // Create a channel to send and receive integers
+    val channel = Channel<Int>()
+
+    // Launch a coroutine to send data into the channel
+    launch {
+        for (i in 1..5) {
+            channel.send(i)  // Sending data
+            println("Sent: $i")
+        }
+        channel.close()  // Closing the channel after sending
+    }
+
+    // Launch a coroutine to receive data from the channel
+    launch {
+        for (i in channel) {  // Receiving data
+            println("Received: $i")
+        }
+    }
+}
+```
+Note that it appears some messages were received before they were sent because of the queuing up of the print messages
+
+```shell
+Received: 1
+Sent: 1
+Sent: 2
+Received: 2
+Received: 3
+Sent: 3
+Sent: 4
+Received: 4
+Received: 5
+Sent: 5
+
+```
+
+##### Closing a channel
+
+```kotlin
+package demo_5_20
+
+import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.*
+
+fun main() = runBlocking {
+    val channel = Channel<Int>()
+    launch {
+        for (x in 1..5) channel.send(x * x)
+        channel.close() // we're done sending
+    }
+    // here we print received values using `for` loop (until the channel is closed)
+    for (y in channel) println(y)
+    println("Done!")
+}
+```
+```shell
+1
+4
+9
+16
+25
+Done!
+```
+
+### Producers
+
+Creates a coroutine that produces a stream of values, returning a ReceiveChannel. It’s typically used in producer-consumer scenarios.
+
+```kotlin
+import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.*
+
+fun main() = runBlocking {
+    val channel = produce {
+        for (x in 1..5) {
+            send(x)
+            delay(100L)
+        }
+    }
+
+    for (y in channel) {
+        println(y)
+    }
+}
+
+```
+
+### Actors
+
+Launches a coroutine that processes messages sent to its mailbox (an ActorScope). It returns a SendChannel, used to send messages to the actor.
+
+```kotlin
+package demo_5_22
+
+import kotlinx.coroutines.*
+import kotlinx.coroutines.channels.*
+
+fun main() = runBlocking<Unit> {
+    val actor = actor<Int> {
+        var sum = 0
+        for (msg in channel) {
+            sum += msg
+            println("Received $msg, sum is now $sum")
+        }
+    }
+
+    actor.send(1)
+    actor.send(2)
+    actor.send(3)
+    actor.close()  // Closing the actor
+}
+
+```
+
+```shell
+Received 1, sum is now 1
+Received 2, sum is now 3
+Received 3, sum is now 6
+```
+
+##  End Section

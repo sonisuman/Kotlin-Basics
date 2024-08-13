@@ -1,4 +1,4 @@
-# Lab 4-1  Higher Order Functions
+  # Lab 4-1  Higher Order Functions
 <!--suppress CheckImageSize -->
 
 ## Lab Setup
