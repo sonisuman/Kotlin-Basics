@@ -7,8 +7,12 @@
 
 ## Collections
 
-[Kotlin Documenation](https://kotlinlang.org/docs/collections-overview.html)
+[Kotlin Documentation](https://kotlinlang.org/docs/collections-overview.html)
 
+
+## Sequences
+
+[Kotlin Documentation](https://kotlinlang.org/docs/sequences.html)
 
 
 ## End
