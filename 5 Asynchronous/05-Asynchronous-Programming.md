@@ -925,4 +925,17 @@ Received 2, sum is now 3
 Received 3, sum is now 6
 ```
 
-##  End Section
+---
+
+##  Asynchronous Flow
+
+[Kotlin Documentation](https://kotlinlang.org/docs/flow.html)
+
+A `sequence` is a way to handle a collection of data elements in a lazy manner. This means that elements are processed one by one, only when needed, rather than all at once. This is particularly useful when dealing with large collections or potentially infinite data, as it helps save memory and processing power.
+
+
+    Lazy Evaluation: Unlike regular collections like List or Set, where all elements are processed immediately, sequences process each element on demand. This means elements are computed only when you access them, rather than upfront.
+
+    Efficient with Large Data: Sequences are ideal for working with large datasets or streams of data where you don't want to load everything into memory at once.
+
+    Potentially Infinite: You can create sequences that could, in theory, generate an infinite number of elements. Since they are evaluated lazily, you can work with such sequences without running out of memory, as long as you only access a finite number of elements.
